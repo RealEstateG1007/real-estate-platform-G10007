@@ -1,25 +1,28 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Zap, Star, ArrowRight, Quote, User } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
-import TiltCard from '../components/TiltCard';
 import TypingText from '../components/TypingText';
 import PropertyCard from '../components/PropertyCard.jsx';
-
-
 import Toast from '../components/Toast';
 
 function Home({ openAuth, user }) {
     const [featuredProperties, setFeaturedProperties] = useState([]);
-    const [toast, setToast] = useState(null); // { message, type }
+    const [toast, setToast] = useState(null);
 
     useEffect(() => {
         fetch('/api/properties')
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error("Failed to fetch properties");
+                return res.json();
+            })
             .then(data => {
-                // Get top 3 properties (e.g., most expensive or just first 3)
-                const sorted = [...data].sort((a, b) => b.price - a.price).slice(0, 3);
-                setFeaturedProperties(sorted);
+                if (Array.isArray(data)) {
+                    const sorted = [...data].sort((a, b) => b.price - a.price).slice(0, 3);
+                    setFeaturedProperties(sorted);
+                } else {
+                    console.error("API returned non-array data:", data);
+                }
             })
             .catch(err => console.error("Failed to fetch properties:", err));
     }, []);
@@ -48,7 +51,6 @@ function Home({ openAuth, user }) {
                 />
             )}
 
-            {/* Hero Section */}
             <header className="hero-section" style={{ position: 'relative', overflow: 'hidden' }}>
                 <div className="container" style={{ position: 'relative', zIndex: 2 }}>
                     <motion.h1
@@ -105,7 +107,6 @@ function Home({ openAuth, user }) {
                 </div>
             </header>
 
-            {/* Featured Listings Section */}
             {featuredProperties.length > 0 && (
                 <section className="container" style={{ padding: '6rem 2rem' }}>
                     <motion.div
@@ -155,89 +156,6 @@ function Home({ openAuth, user }) {
                 </section>
             )}
 
-            {/* Features Section */}
-            <section className="features-section container">
-                <motion.div
-                    className="section-header"
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.2 }}
-                    transition={{ duration: 0.6 }}
-                >
-                    <h2>Why Choose Us</h2>
-                    <p>We redefine the real estate experience with trust and speed.</p>
-                </motion.div>
-
-                <motion.div
-                    className="features-grid"
-                    variants={staggerContainer}
-                    initial="initial"
-                    whileInView="animate"
-                    viewport={{ once: true, amount: 0.1 }}
-                >
-                    {[
-                        { icon: <Shield size={32} />, title: "Trusted Platform", desc: "Verified listings and secure transactions." },
-                        { icon: <Zap size={32} />, title: "Fast Process", desc: "Streamlined viewing and purchasing process." },
-                        { icon: <Star size={32} />, title: "Premium Quality", desc: "Hand-picked properties meeting high standards." }
-                    ].map((feature, index) => (
-                        <motion.div key={index} variants={fadeInUp}>
-                            <TiltCard className="feature-card">
-                                <h3>{feature.title}</h3>
-                                <p>{feature.desc}</p>
-                            </TiltCard>
-                        </motion.div>
-                    ))}
-                </motion.div>
-            </section>
-
-            {/* Testimonials Section */}
-            <section style={{ background: '#000', padding: '6rem 2rem' }}>
-                <div className="container">
-                    <motion.div
-                        className="section-header"
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, amount: 0.2 }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <h2>Succcess Stories</h2>
-                        <p>What our clients say about their experience.</p>
-                    </motion.div>
-
-                    <motion.div
-                        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}
-                        variants={staggerContainer}
-                        initial="initial"
-                        whileInView="animate"
-                        viewport={{ once: true, amount: 0.1 }}
-                    >
-                        {[
-                            { name: "Sarah Jenkins", role: "Home Buyer", quote: "Found my dream apartment in less than a week. The sorting features are a lifesaver!" },
-                            { name: "Michael Ross", role: "Property Investor", quote: "The most professional platform for high-end listings. Sold my villa within days." },
-                            { name: "Elena Rodriguez", role: "First-time Buyer", quote: "Incredible support team and a very smooth process from start to finish." }
-                        ].map((testimonial, index) => (
-                            <motion.div key={index} variants={fadeInUp}>
-                                <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)', position: 'relative' }}>
-                                    <Quote size={40} color="var(--accent)" style={{ opacity: 0.2, position: 'absolute', top: '20px', right: '20px' }} />
-                                    <p style={{ fontStyle: 'italic', marginBottom: '1.5rem', lineHeight: '1.6' }}>"{testimonial.quote}"</p>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>{testimonial.name[0]}</span>
-                                        </div>
-                                        <div>
-                                            <h4 style={{ margin: 0, fontSize: '0.95rem' }}>{testimonial.name}</h4>
-                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{testimonial.role}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </motion.div>
-                </div>
-            </section>
-
-
-            {/* CTA Section - Hidden for Buyers */}
             {(!user || user.role !== 'buyer') && (
                 <section className="cta-section">
                     <motion.div

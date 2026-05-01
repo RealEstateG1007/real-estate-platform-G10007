@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Building2, Trash2, TrendingUp, DollarSign, Edit2, X, Save, CheckCircle, Menu, Moon, Sun, LayoutDashboard, LogOut, Activity } from 'lucide-react';
+import { Users, Building2, Trash2, TrendingUp, DollarSign, Edit2, X, Save, CheckCircle, Menu, Moon, Sun, LayoutDashboard, LogOut, Activity, FileText } from 'lucide-react';
 import '../index.css';
 import Toast from '../components/Toast';
 import AdminAnalytics from '../components/AdminAnalytics';
@@ -10,7 +10,7 @@ function AdminDashboard() {
     const [stats, setStats] = useState({ users: 0, properties: 0, totalValue: 0 });
     const [users, setUsers] = useState([]);
     const [properties, setProperties] = useState([]);
-    const [activeTab, setActiveTab] = useState('stats');
+    const [verifications, setVerifications] = useState([]);
     const [editingItem, setEditingItem] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -19,6 +19,7 @@ function AdminDashboard() {
     // UI States
     const [theme, setTheme] = useState('dark');
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState('stats');
 
     useEffect(() => {
         document.body.setAttribute('data-theme', theme);
@@ -28,7 +29,7 @@ function AdminDashboard() {
         const loadData = async () => {
             setLoading(true);
             try {
-                await Promise.all([fetchStats(), fetchUsers(), fetchProperties()]);
+                await Promise.all([fetchStats(), fetchUsers(), fetchProperties(), fetchVerifications()]);
             } catch (err) {
                 console.error("Dashboard Load Error:", err);
                 setError("Failed to load dashboard data.");
@@ -74,6 +75,30 @@ function AdminDashboard() {
         if (!res.ok) throw new Error('Failed to fetch properties');
         const data = await res.json();
         setProperties(Array.isArray(data) ? data : []);
+    };
+
+    const fetchVerifications = async () => {
+        const res = await fetch('/api/admin/pending-verifications', {
+            headers: getAuthHeaders(false)
+        });
+        if (res.ok) {
+            const data = await res.json();
+            setVerifications(Array.isArray(data) ? data : []);
+        }
+    };
+
+    const handleVerifyStatus = async (id, status) => {
+        try {
+            await fetch(`/api/admin/verify-seller/${id}`, {
+                method: 'PUT',
+                headers: getAuthHeaders(true),
+                body: JSON.stringify({ status })
+            });
+            fetchVerifications();
+            setToast({ message: `Seller verification ${status}.`, type: 'success' });
+        } catch (err) {
+            setToast({ message: 'Failed to update verification', type: 'error' });
+        }
     };
 
     const [selectedProperties, setSelectedProperties] = useState([]);
@@ -213,11 +238,12 @@ function AdminDashboard() {
         { id: 'stats', label: 'Overview', icon: LayoutDashboard },
         { id: 'users', label: 'Manage Users', icon: Users },
         { id: 'properties', label: 'Manage Listings', icon: Building2 },
-        { id: 'logs', label: 'Activity Logs', icon: Activity }
+        { id: 'logs', label: 'Activity Logs', icon: Activity },
+        { id: 'verifications', label: 'Verifications', icon: FileText }
     ];
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', transition: 'background 0.3s ease, color 0.3s ease' }}>
+        <div style={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #0b0c10 0%, #1f2833 100%)', color: '#c5c6c7', transition: 'background 0.3s ease, color 0.3s ease' }}>
             {toast && (
                 <Toast
                     message={toast.message}
@@ -350,15 +376,32 @@ function AdminDashboard() {
                 </button>
             </aside>
 
-            {/* Global CSS for Sidebar Hover Logic */}
+            {/* Global CSS for Sidebar Hover Logic & Premium Admin Theme */}
             <style>{`
+                :root {
+                    --admin-accent: #d4af37; /* Gold */
+                }
+                .admin-sidebar {
+                    background: rgba(11, 12, 16, 0.95) !important;
+                    border-right: 1px solid rgba(212, 175, 55, 0.2) !important;
+                }
                 .admin-sidebar:hover .sidebar-text {
                     opacity: 1 !important;
                 }
                 .admin-sidebar:hover .admin-logout-btn:hover {
-                    background: var(--bg-primary) !important;
-                    border-color: var(--border) !important;
+                    background: rgba(255,255,255,0.05) !important;
+                    border-color: rgba(212, 175, 55, 0.2) !important;
                 }
+                .admin-premium-card {
+                    background: rgba(20, 20, 20, 0.7);
+                    backdrop-filter: blur(15px);
+                    border: 1px solid rgba(212, 175, 55, 0.2);
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                    border-radius: 16px;
+                }
+                /* Override accent color for this specific page */
+                h1, h2, h3 { color: #fff !important; }
+                .glow-orb { background: var(--admin-accent) !important; opacity: 0.1 !important; }
             `}</style>
 
             {/* Main Content Area */}
@@ -416,7 +459,7 @@ function AdminDashboard() {
                                     </div>
                                     <span style={{ background: 'rgba(229, 57, 53, 0.1)', color: '#e53935', padding: '0.25rem 0.75rem', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 600 }}>-2%</span>
                                 </div>
-                                <h3 style={{ fontSize: '2.5rem', margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>${(stats?.totalValue || 0).toLocaleString()}</h3>
+                                <h3 style={{ fontSize: '2.5rem', margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>₹{(stats?.totalValue || 0).toLocaleString('en-IN')}</h3>
                                 <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Market Value</p>
                             </div>
                         </div>
@@ -429,6 +472,55 @@ function AdminDashboard() {
                 {/* Logs View */}
                 {activeTab === 'logs' && (
                     <AdminLogs />
+                )}
+
+                {/* Verifications View */}
+                {activeTab === 'verifications' && (
+                    <div className="table-container admin-premium-card" style={{ overflowX: 'auto', padding: '1rem' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', color: '#fff' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid rgba(212, 175, 55, 0.3)', textAlign: 'left' }}>
+                                    <th style={{ padding: '1.5rem', color: '#d4af37' }}>Username</th>
+                                    <th style={{ padding: '1.5rem', color: '#d4af37' }}>Email</th>
+                                    <th style={{ padding: '1.5rem', color: '#d4af37' }}>Document</th>
+                                    <th style={{ padding: '1.5rem', color: '#d4af37' }}>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {verifications.length === 0 ? (
+                                    <tr><td colSpan="4" style={{ padding: '3rem', textAlign: 'center', color: '#888', fontSize: '1.1rem' }}>No pending verifications</td></tr>
+                                ) : verifications.map(u => (
+                                    <tr key={u._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <td style={{ padding: '1.5rem', fontWeight: 'bold' }}>{u.username}</td>
+                                        <td style={{ padding: '1.5rem', color: '#aaa' }}>{u.email}</td>
+                                        <td style={{ padding: '1.5rem' }}>
+                                            {u.verificationDocument ? (
+                                                <a href={`http://localhost:5000/uploads/${u.verificationDocument}`} target="_blank" rel="noreferrer" style={{ color: '#d4af37', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500 }}>
+                                                    <FileText size={18} /> View Document
+                                                </a>
+                                            ) : (
+                                                <span style={{ color: '#666' }}>N/A</span>
+                                            )}
+                                        </td>
+                                        <td style={{ padding: '1.5rem', display: 'flex', gap: '1rem' }}>
+                                            <button
+                                                onClick={() => handleVerifyStatus(u._id, 'verified')}
+                                                style={{ background: 'linear-gradient(to right, #38ef7d, #11998e)', padding: '0.6rem 1.2rem', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 4px 15px rgba(56, 239, 125, 0.3)' }}
+                                            >
+                                                Approve
+                                            </button>
+                                            <button
+                                                onClick={() => handleVerifyStatus(u._id, 'rejected')}
+                                                style={{ background: 'linear-gradient(to right, #ff416c, #ff4b2b)', padding: '0.6rem 1.2rem', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 4px 15px rgba(255, 65, 108, 0.3)' }}
+                                            >
+                                                Reject
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
 
                 {/* Users View */}
@@ -587,7 +679,7 @@ function AdminDashboard() {
 
                                         {/* Price Area */}
                                         <div style={{ padding: '0 2rem', fontWeight: 'bold', color: 'var(--accent)', fontSize: '1.1rem', whiteSpace: 'nowrap' }}>
-                                            ${property.price.toLocaleString()}
+                                            ₹{property.price.toLocaleString('en-IN')}
                                         </div>
 
                                         {/* Actions Area (Right Column) */}

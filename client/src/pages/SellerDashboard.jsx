@@ -12,24 +12,29 @@ function SellerDashboard() {
     });
     const [loading, setLoading] = useState(true);
 
+    const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')) || {});
+    const [verifyFile, setVerifyFile] = useState(null);
+    const [uploading, setUploading] = useState(false);
+
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const user = JSON.parse(localStorage.getItem('user'));
                 const token = user?.token;
 
-                // Note: In real app, we need to pass token in headers
-                // Since we are using fetch, we need to add Authorization header
+                // Fetch latest user info
+                const userRes = await fetch('/api/users/me', {
+                    headers: { 'token': `Bearer ${token}` }
+                });
+                if (userRes.ok) {
+                    const userData = await userRes.json();
+                    const updatedUser = { ...user, ...userData };
+                    setUser(updatedUser);
+                    localStorage.setItem('user', JSON.stringify(updatedUser));
+                }
+
                 // API endpoint: /api/properties/user/stats
-
-                // IMPORTANT: In properties.js we added /user/stats but standard restful might be /api/properties/user/stats 
-                // depending on how index.js mounts it. 
-                // Assuming index.js mounts properties routes at /api/properties
-
                 const res = await fetch('/api/properties/user/stats', {
-                    headers: {
-                        'token': `Bearer ${token}` // verifyToken middleware usually expects 'token' header or Authorization
-                    }
+                    headers: { 'token': `Bearer ${token}` }
                 });
 
                 if (res.ok) {
@@ -46,6 +51,33 @@ function SellerDashboard() {
         fetchStats();
     }, []);
 
+    const handleVerificationSubmit = async (e) => {
+        e.preventDefault();
+        if (!verifyFile) return;
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('document', verifyFile);
+
+        try {
+            const res = await fetch('/api/users/verify', {
+                method: 'POST',
+                headers: { 'token': `Bearer ${user.token}` },
+                body: formData
+            });
+            if (res.ok) {
+                const updatedUser = await res.json();
+                const newUser = { ...user, ...updatedUser };
+                setUser(newUser);
+                localStorage.setItem('user', JSON.stringify(newUser));
+                setVerifyFile(null);
+            }
+        } catch (err) {
+            console.error("Verification upload failed", err);
+        } finally {
+            setUploading(false);
+        }
+    };
+
     if (loading) return <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>Loading Dashboard...</div>;
 
     return (
@@ -60,6 +92,29 @@ function SellerDashboard() {
                         <Plus size={18} /> List New Property
                     </button>
                 </Link>
+            </div>
+
+            {/* Verification Status */}
+            <div style={{ background: 'var(--card-bg)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '2rem' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Account Verification</h3>
+                {user.verificationStatus === 'verified' && (
+                    <div style={{ color: '#32cd32', fontWeight: 'bold' }}>✓ You are a Verified Seller.</div>
+                )}
+                {user.verificationStatus === 'pending' && (
+                    <div style={{ color: '#ffa500', fontWeight: 'bold' }}>⏳ Your verification document is pending review by an administrator.</div>
+                )}
+                {(!user.verificationStatus || user.verificationStatus === 'unverified' || user.verificationStatus === 'rejected') && (
+                    <div>
+                        {user.verificationStatus === 'rejected' && <p style={{ color: '#ff6b6b' }}>Your previous verification was rejected. Please re-upload a valid ID or ownership document.</p>}
+                        <p style={{ color: 'var(--text-secondary)' }}>Please upload a government-issued ID or property ownership document to become verified.</p>
+                        <form onSubmit={handleVerificationSubmit} style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1rem' }}>
+                            <input type="file" onChange={(e) => setVerifyFile(e.target.files[0])} required />
+                            <button type="submit" disabled={uploading} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
+                                {uploading ? 'Uploading...' : 'Submit Document'}
+                            </button>
+                        </form>
+                    </div>
+                )}
             </div>
 
             {/* Stats Cards */}
@@ -128,7 +183,7 @@ function SellerDashboard() {
                                                 <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{property.title}</span>
                                             </div>
                                         </td>
-                                        <td style={{ padding: '1rem' }}>${property.price.toLocaleString()}</td>
+                                        <td style={{ padding: '1rem' }}>₹{property.price.toLocaleString('en-IN')}</td>
                                         <td style={{ padding: '1rem' }}>{property.location}</td>
                                         <td style={{ padding: '1rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

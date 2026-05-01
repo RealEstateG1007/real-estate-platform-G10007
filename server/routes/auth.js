@@ -1,81 +1,106 @@
 const router = require('express').Router();
-const User = require('../models/User');
+const supabase = require('../config/supabase');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const ActivityLog = require('../models/ActivityLog');
+
+// Helper to map Supabase row to frontend expected format
+const mapUser = (user) => {
+    if (!user) return null;
+    const { id, password, ...rest } = user;
+    return { _id: id, ...rest };
+};
 
 // Register
 router.post('/register', async (req, res) => {
     try {
-        // Limit Admins to 3
-        if (req.body.role === 'admin') {
-            const adminCount = await User.countDocuments({ role: 'admin' });
-            if (adminCount >= 3) {
-                return res.status(403).json("You don't have access. You cannot register as an admin.");
-            }
+        const { username, email, password, role } = req.body;
+
+        if (username && username.toLowerCase() === 'admin') {
+            return res.status(403).json("The username 'admin' is reserved and cannot be registered.");
         }
 
-        // Hash password
+        if (role === 'admin') {
+            return res.status(403).json("You cannot register as an admin through this portal.");
+        }
+
+        const allowedRoles = ['buyer', 'seller', 'agent'];
+        const assignedRole = allowedRoles.includes(role) ? role : 'buyer';
+
+        // Check if username or email exists
+        const { data: existingUser } = await supabase
+            .from('users')
+            .select('id')
+            .or(`username.eq.${username},email.eq.${email}`)
+            .single();
+
+        if (existingUser) {
+            return res.status(400).json({ message: 'Username or email already exists.' });
+        }
+
         const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(req.body.password, salt);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
-        const newUser = new User({
-            username: req.body.username,
-            email: req.body.email,
-            password: hashedPassword,
-            role: req.body.role || 'buyer'
-        });
+        const { data: user, error } = await supabase
+            .from('users')
+            .insert([{ username, email, password: hashedPassword, role: assignedRole }])
+            .select()
+            .single();
 
-        const user = await newUser.save();
+        if (error) throw error;
 
         const token = jwt.sign(
-            { id: user._id, role: user.role },
-            process.env.JWT_SECRET || "secretkey", // In production use .env
+            { id: user.id, role: user.role },
+            process.env.JWT_SECRET || "secretkey",
             { expiresIn: "5d" }
         );
 
-        const { password, ...others } = user._doc;
-
-        // Log Registration Action
-        await ActivityLog.create({
-            user: user._id,
+        await supabase.from('activity_logs').insert([{
+            user_id: user.id,
             action: 'User Registered',
             details: `New account created: ${user.username} (${user.role})`
-        });
+        }]);
 
-        res.status(200).json({ ...others, token });
+        res.status(200).json({ ...mapUser(user), token });
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Register Error:", err);
+        const message = err.message || 'Registration failed. Please try again.';
+        res.status(500).json({ message });
     }
 });
 
 // Login
 router.post('/login', async (req, res) => {
     try {
-        const user = await User.findOne({ username: req.body.username });
-        if (!user) return res.status(404).json("User not found!");
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('username', req.body.username)
+            .single();
+
+        if (error || !user) {
+            return res.status(404).json("User not found!");
+        }
 
         const validPassword = await bcrypt.compare(req.body.password, user.password);
         if (!validPassword) return res.status(400).json("Wrong credentials!");
 
         const token = jwt.sign(
-            { id: user._id, role: user.role },
-            process.env.JWT_SECRET || "secretkey", // In production use .env
+            { id: user.id, role: user.role },
+            process.env.JWT_SECRET || "secretkey",
             { expiresIn: "5d" }
         );
 
-        const { password, ...others } = user._doc;
-
-        // Log Login Action
-        await ActivityLog.create({
-            user: user._id,
+        await supabase.from('activity_logs').insert([{
+            user_id: user.id,
             action: 'User Logged In',
             details: `Successful login by: ${user.username}`
-        });
+        }]);
 
-        res.status(200).json({ ...others, token });
+        res.status(200).json({ ...mapUser(user), token });
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Login Error Details:", err);
+        const message = err.message || 'Internal server error. Please try again.';
+        res.status(500).json({ message });
     }
 });
 

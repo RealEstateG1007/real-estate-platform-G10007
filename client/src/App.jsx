@@ -7,7 +7,6 @@ import ListingDetails from './pages/ListingDetails';
 import AddListing from './pages/AddListing';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
-import AIChat from './components/AIChat';
 import AdminEntry from './pages/AdminEntry';
 import AdminDashboard from './pages/AdminDashboard';
 import SellerDashboard from './pages/SellerDashboard';
@@ -54,8 +53,18 @@ function App() {
   };
 
   const handleLogin = (userData) => {
-    setUser(userData);
-    setShowAuthModal(false);
+    if (userData.role === 'admin') {
+      // Admin logged in via regular modal — treat as admin
+      localStorage.removeItem('user');
+      localStorage.setItem('adminUser', JSON.stringify(userData));
+      setUser(null);
+      setAdminUser(userData);
+      setShowAuthModal(false);
+      window.location.href = '/admin'; // Hard redirect to admin dashboard
+    } else {
+      setUser(userData);
+      setShowAuthModal(false);
+    }
   };
 
   const handleAdminLogin = (adminData) => {
@@ -108,13 +117,13 @@ function App() {
                 <Link to="/properties" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Search size={18} /> Properties
                 </Link>
-                {user && user.role === 'seller' && (
+                {user && (user.role === 'seller' || user.role === 'agent') && (
                   <>
                     <Link to="/add" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <PlusSquare size={18} /> List Property
                     </Link>
                     <Link to="/seller" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent)' }}>
-                      <LayoutGrid size={18} /> Dashboard
+                      <LayoutGrid size={18} /> {user.role === 'agent' ? 'Agent Dashboard' : 'Dashboard'}
                     </Link>
                   </>
                 )}
@@ -157,15 +166,14 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/careers" element={<Careers />} />
         <Route path="/contact" element={<Contact />} />
-        <Route path="/add" element={user && user.role === 'seller' ? <AddListing /> : <Navigate to="/" />} />
-        <Route path="/seller" element={user && user.role === 'seller' ? <SellerDashboard /> : <Navigate to="/" />} />
-        <Route path="/admin" element={adminUser ? <AdminDashboard /> : <Navigate to="/bvy-estate" />} />
+        <Route path="/add" element={user && (user.role === 'seller' || user.role === 'agent') ? <AddListing /> : <Navigate to="/" />} />
+        <Route path="/seller" element={user && (user.role === 'seller' || user.role === 'agent') ? <SellerDashboard /> : <Navigate to="/" />} />
+        <Route path="/admin" element={adminUser && adminUser.role === 'admin' ? <AdminDashboard /> : <Navigate to="/bvy-estate" />} />
 
         {/* Secret Admin Route */}
         <Route path="/bvy-estate" element={<AdminEntry onAdminLogin={handleAdminLogin} />} />
       </Routes>
       <Footer />
-      <AIChat />
 
       {showAuthModal && !user && !loading && (
         <AuthModal

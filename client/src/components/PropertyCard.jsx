@@ -8,6 +8,10 @@ function PropertyCard({ property }) {
         return `http://localhost:5000/uploads/${img}`;
     };
 
+    const handleImageError = (e) => {
+        e.target.src = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=80';
+    };
+
     return (
         <Link to={`/property/${property._id}`} className="card" style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
             <div style={{ height: '240px', overflow: 'hidden', position: 'relative' }}>
@@ -15,6 +19,7 @@ function PropertyCard({ property }) {
                     <img
                         src={getImageUrl(property.image)}
                         alt={property.title}
+                        onError={handleImageError}
                         style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
                     />
                 ) : (
@@ -23,7 +28,7 @@ function PropertyCard({ property }) {
                     </div>
                 )}
                 <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', padding: '20px', boxSizing: 'border-box' }}>
-                    <p className="price" style={{ marginBottom: 0 }}>${property.price.toLocaleString()}</p>
+                    <p className="price" style={{ marginBottom: 0 }}>₹{property.price.toLocaleString('en-IN')}</p>
                 </div>
             </div>
 

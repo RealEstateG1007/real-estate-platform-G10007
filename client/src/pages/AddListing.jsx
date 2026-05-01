@@ -127,18 +127,18 @@ function AddListing() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '1.5rem' }}>
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Price ($)</label>
-                        <input name="price" type="number" placeholder="500000" value={formData.price} onChange={handleChange} required />
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Price (₹)</label>
+                        <input name="price" type="number" placeholder="10000000" value={formData.price} onChange={handleChange} required />
                     </div>
                     <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Location</label>
-                        <input name="location" placeholder="e.g. New York, NY" value={formData.location} onChange={handleChange} required />
+                        <input name="location" placeholder="e.g. Jubilee Hills, Hyderabad" value={formData.location} onChange={handleChange} required />
                     </div>
                 </div>
 
                 <div style={{ marginBottom: '1.5rem' }}>
                     <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Pincode / Zip Code</label>
-                    <input name="pincode" placeholder="e.g. 10001" value={formData.pincode} onChange={handleChange} required style={{ width: '100%' }} />
+                    <input name="pincode" placeholder="e.g. 500033" value={formData.pincode} onChange={handleChange} required style={{ width: '100%' }} />
                 </div>
 
                 <div style={{ marginBottom: '1.5rem' }}>

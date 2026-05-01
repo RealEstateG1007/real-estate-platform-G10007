@@ -20,6 +20,12 @@ function AuthModal({ onClose, onLogin, initialView = 'login', defaultRole = 'buy
         setError('');
         const endpoint = isLogin ? 'login' : 'register';
 
+        // Frontend guard: block 'admin' username registration
+        if (!isLogin && formData.username.toLowerCase() === 'admin') {
+            setError("The username 'admin' is reserved. Please choose another.");
+            return;
+        }
+
         try {
             const res = await fetch(`/api/auth/${endpoint}`, {
                 method: 'POST',
@@ -28,7 +34,10 @@ function AuthModal({ onClose, onLogin, initialView = 'login', defaultRole = 'buy
             });
             const data = await res.json();
 
-            if (!res.ok) throw new Error(data);
+            if (!res.ok) {
+                const errorMessage = typeof data === 'string' ? data : (data.message || data.error || 'Authentication failed');
+                throw new Error(errorMessage);
+            }
 
             localStorage.setItem('user', JSON.stringify(data));
             onLogin(data);
@@ -82,6 +91,10 @@ function AuthModal({ onClose, onLogin, initialView = 'login', defaultRole = 'buy
                                 <label className={formData.role === 'seller' ? 'selected' : ''}>
                                     <input type="radio" name="role" value="seller" checked={formData.role === 'seller'} onChange={handleChange} />
                                     Seller
+                                </label>
+                                <label className={formData.role === 'agent' ? 'selected' : ''}>
+                                    <input type="radio" name="role" value="agent" checked={formData.role === 'agent'} onChange={handleChange} />
+                                    Agent
                                 </label>
                             </div>
                         </div>

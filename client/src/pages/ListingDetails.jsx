@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, ArrowLeft, Mail, Calendar, Trash2, X, CheckCircle, Share2, Heart, Calculator } from 'lucide-react';
+import { MapPin, ArrowLeft, Mail, Calendar, Trash2, X, CheckCircle, Share2, Heart, Calculator, Target, Home } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Toast from '../components/Toast';
 import MortgageCalculator from '../components/MortgageCalculator';
+import NegotiationAssistant from '../components/NegotiationAssistant';
+import LiveabilityScore from '../components/LiveabilityScore';
 
 function ListingDetails({ user, adminUser }) {
     const { id } = useParams();
@@ -11,6 +13,8 @@ function ListingDetails({ user, adminUser }) {
     const [property, setProperty] = useState(null);
     const [toast, setToast] = useState(null);
     const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+    const [isNegotiationOpen, setIsNegotiationOpen] = useState(false);
+    const [isLiveabilityOpen, setIsLiveabilityOpen] = useState(false);
 
     // Modal States
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -167,7 +171,7 @@ function ListingDetails({ user, adminUser }) {
                     }}>
                         <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-secondary)', textTransform: 'uppercase', fontSize: '0.85rem', letterSpacing: '0.1em' }}>Price</p>
                         <div style={{ fontSize: '3rem', color: '#fff', fontWeight: '700', marginBottom: '2rem', letterSpacing: '-0.02em' }}>
-                            ${price}
+                            ₹{Number(property.price).toLocaleString('en-IN')}
                         </div>
 
                         <div style={{ display: 'grid', gap: '1rem' }}>
@@ -175,8 +179,24 @@ function ListingDetails({ user, adminUser }) {
                                 Schedule Viewing
                             </button>
                             <button onClick={() => setShowContactModal(true)} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
-                                Contact Agent
+                                Contact Agent / Seller
                             </button>
+                            {user && user.role === 'buyer' && (
+                                <>
+                                    <button
+                                        onClick={() => setIsNegotiationOpen(true)}
+                                        style={{ width: '100%', background: 'rgba(102, 126, 234, 0.1)', border: '1px solid rgba(102, 126, 234, 0.3)', color: '#667eea', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                                    >
+                                        <Target size={18} /> AI Negotiation
+                                    </button>
+                                    <button
+                                        onClick={() => setIsLiveabilityOpen(true)}
+                                        style={{ width: '100%', background: 'rgba(56, 239, 125, 0.1)', border: '1px solid rgba(56, 239, 125, 0.3)', color: '#38ef7d', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                                    >
+                                        <Home size={18} /> Liveability Score
+                                    </button>
+                                </>
+                            )}
                             <button
                                 onClick={() => setIsCalculatorOpen(true)}
                                 style={{ width: '100%', background: 'rgba(212, 175, 55, 0.1)', border: '1px solid rgba(212, 175, 55, 0.3)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
@@ -232,11 +252,11 @@ function ListingDetails({ user, adminUser }) {
                 <div className="modal-overlay">
                     <div className="auth-modal" style={{ maxWidth: '400px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                            <h3>{showContactModal ? 'Contact Agent' : 'Schedule Viewing'}</h3>
+                            <h3>{showContactModal ? 'Contact Agent / Seller' : 'Schedule Viewing'}</h3>
                             <button onClick={() => { setShowContactModal(false); setShowScheduleModal(false) }} style={{ background: 'transparent', color: '#000', padding: 0, boxShadow: 'none' }}><X /></button>
                         </div>
                         <p style={{ color: '#666', marginBottom: '2rem' }}>
-                            {contactSuccess || scheduleSuccess ? 'Request Sent Successfully!' : 'Enter your details below to connect with the agent.'}
+                            {contactSuccess || scheduleSuccess ? 'Request Sent Successfully!' : 'Enter your details below to connect with the agent or seller.'}
                         </p>
                         {!contactSuccess && !scheduleSuccess && (
                             <form onSubmit={showContactModal ? handleContactSubmit : handleScheduleSubmit}>
@@ -255,6 +275,18 @@ function ListingDetails({ user, adminUser }) {
                 isOpen={isCalculatorOpen}
                 onClose={() => setIsCalculatorOpen(false)}
                 price={property.price}
+            />
+            {/* AI Negotiation Assistant */}
+            <NegotiationAssistant
+                property={property}
+                isOpen={isNegotiationOpen}
+                onClose={() => setIsNegotiationOpen(false)}
+            />
+            {/* Liveability Score */}
+            <LiveabilityScore
+                property={property}
+                isOpen={isLiveabilityOpen}
+                onClose={() => setIsLiveabilityOpen(false)}
             />
         </div>
     );

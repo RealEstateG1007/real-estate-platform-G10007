@@ -10,10 +10,19 @@ function Properties() {
 
     useEffect(() => {
         fetch('/api/properties')
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error("Failed to fetch properties");
+                return res.json();
+            })
             .then(data => {
-                setProperties(data);
-                setFilteredProperties(data);
+                if (Array.isArray(data)) {
+                    setProperties(data);
+                    setFilteredProperties(data);
+                } else {
+                    console.error("API returned non-array data:", data);
+                    setProperties([]);
+                    setFilteredProperties([]);
+                }
             })
             .catch(err => console.error(err));
     }, []);
@@ -66,11 +75,11 @@ function Properties() {
                         style={{ margin: 0, width: '200px' }}
                     >
                         <option value="all">Any Price</option>
-                        <option value="0-100000">Under $100k</option>
-                        <option value="100000-300000">$100k - $300k</option>
-                        <option value="300000-500000">$300k - $500k</option>
-                        <option value="500000-1000000">$500k - $1M</option>
-                        <option value="1000000+">$1M+</option>
+                        <option value="0-5000000">Under ₹50 Lakhs</option>
+                        <option value="5000000-10000000">₹50L - ₹1 Cr</option>
+                        <option value="10000000-20000000">₹1 Cr - ₹2 Cr</option>
+                        <option value="20000000-50000000">₹2 Cr - ₹5 Cr</option>
+                        <option value="50000000+">₹5 Cr+</option>
                     </select>
                 </div>
             </header>

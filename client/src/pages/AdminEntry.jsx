@@ -31,7 +31,10 @@ function AdminEntry({ onAdminLogin }) {
             });
             const data = await res.json();
 
-            if (!res.ok) throw new Error(data);
+            if (!res.ok) {
+                const errorMessage = typeof data === 'string' ? data : (data.message || data.error || 'Authentication failed');
+                throw new Error(errorMessage);
+            }
 
             // Double check role for login
             if (isLogin && data.role !== 'admin') {
